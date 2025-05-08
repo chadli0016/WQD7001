@@ -114,6 +114,14 @@ new_set.loc[
             lambda x: float(x.split('k')[0])*1000 if 'k' in str(x) else float(
                 x)
             )
+# consistency and format, by converting the amount from str to float
+new_set.loc[
+    :, 'favorite'] = new_set.loc[
+        :, 'favorite'].apply(
+            lambda x: float(x.split('k')[0])*1000 if (
+                'k' in str(x) and x != 'label_favorite'
+                ) else (float(x) if isfloat(x) else x)
+            )
 # make it so that the bought product were considered part of someone's favorite
 new_set.loc[
     new_set.loc[:, 'favorite'].apply(lambda x: not isfloat(x)), 'favorite'
@@ -121,14 +129,6 @@ new_set.loc[
         new_set.loc[:, 'favorite'].apply(
             lambda x: not isfloat(x)), 'total_sold'
         ]
-# modify the feature for
-# consistency and format, by converting the amount from str to float
-new_set.loc[
-    :, 'favorite'] = new_set.loc[
-        :, 'favorite'].apply(
-            lambda x: float(x.split('k')[0])*1000 if 'k' in str(x) else float(
-                x)
-            )
 # convert the datetime ti actual datetime format
 new_set['date_date'] = new_set["w_date"].apply(
     lambda x: datetime.datetime.strptime((
@@ -148,6 +148,27 @@ new_set.loc[
         new_set['price_ori'].isna(), 'price_actual'
         ]
 # drop useless columns after using them to get valid fearures
+
+
+def imput(rating,
+          df=new_set[['total_sold', 'total_rating', 'favorite',
+                      'price_actual', 'price_ori', 'item_rating']]
+          ):
+    da = df.groupby("item_rating").agg('mean')
+    return da.loc[rating,]
+
+
+new_set.loc[
+    new_set['price_actual'].isna(), 'price_actual'
+    ] = new_set.loc[
+        new_set['price_actual'].isna(), 'item_rating'
+        ].apply(lambda x: imput(rating=x))
+new_set.loc[
+    new_set['price_ori'].isna(), 'price_ori'
+    ] = new_set.loc[
+        new_set['price_ori'].isna(), 'item_rating'
+        ].apply(lambda x: imput(rating=x))
+
 columns_to_drop = ['w_date', 'timestamp', 'desc']
 new_set.drop(columns_to_drop, axis=1, inplace=True)
 new_set.dropna(axis=0, inplace=True)
